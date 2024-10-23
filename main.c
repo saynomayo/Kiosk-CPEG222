@@ -31,14 +31,14 @@
 
 // below are keypad row and column definitions based on the assumption that JB will be used and columns are CN pins
 // If you want to use JA or use rows as CN pins, modify this part
-#define R4 LATCbits.LATC14
-#define R3 LATDbits.LATD0
-#define R2 LATDbits.LATD1
-#define R1 LATCbits.LATC13
-#define C4 PORTDbits.RD9
-#define C3 PORTDbits.RD11
-#define C2 PORTDbits.RD10
-#define C1 PORTDbits.RD8
+#define R4 LATCbits.LATC3
+#define R3 LATGbits.LATG7
+#define R2 LATGbits.LATG8
+#define R1 LATGbits.LATG9
+#define C4 PORTCbits.RC2
+#define C3 PORTCbits.RC1
+#define C2 PORTCbits.RC4
+#define C1 PORTGbits.RG6
 
 #define RGSIN_SIZE  (sizeof(rgSinSamples) / sizeof(rgSinSamples[0]))
 #define TMR_FREQ_SINE   48000 // 48 kHz
