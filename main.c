@@ -92,7 +92,8 @@ int main(void) {
 
     while (TRUE) 
     {
-        
+        mode1_input(key);
+        mode2_input(key);
         //You can put key-pad indepenent mode transition here, such as countdown-driven mode trasition, monitoring of microphone or update of RGB.
     }
 } 
@@ -154,14 +155,22 @@ void __ISR(_CHANGE_NOTICE_VECTOR) CN_Handler(void) {
         R2 = 0; R1 = R3 = R4 = 1;
         if (C1 == 0) { key = K4; }
         else if (C2 == 0) { key = K5; }
-        else if (C3 == 0) { /* ... */ }
-        else if (C4 == 0) { /* ... */ }
+        else if (C3 == 0) { key = K6; }
+        else if (C4 == 0) { key = K_B; }
 
         // check third row 
-        // ....
+        R3 = 0; R1 = R2 = R4 = 1;
+        if (C1 == 0) { key = K7; }
+        else if (C2 == 0) { key = K8; }
+        else if (C3 == 0) { key = K9; }
+        else if (C4 == 0) { key = K_C; }
 
         // check fourth row 
-        // ....
+        R4 = 0; R1 = R3 = R2 = 1;
+        if (C1 == 0) { key = K0; }
+        else if (C2 == 0) { key = K_F; }
+        else if (C3 == 0) { key = K_E; }
+        else if (C4 == 0) { key = K_D; }
 
         // re-enable all the rows for the next round
         R1 = R2 = R3 = R4 = 0;
@@ -221,7 +230,6 @@ void mode1_input(eKey key){
 
 void mode2_input(eKey key){
     //Go to mdoe 1 if any number key is pressed
-
     switch(key){
         case K0: case K1: case K2: case K3: case K4: case K5: case K6: case K7: case K8: case K9:
             mode1();
