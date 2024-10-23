@@ -41,10 +41,11 @@
 
 typedef enum _KEY {K0, K1, K2, K3, K4, K5, K6, K7, K8, K9, K_A, K_B, K_C, K_D, K_E, K_F, K_NONE} eKey ;
 typedef enum _MODE {MODE1,MODE2,MODE3,MODE4,MODE5,MODE6} eModes ;
-int digit1 = 1;
-int digit2 = 2;
-int digit3 = 3;
-int digit4 = 4;
+int digit1 = -1;
+int digit2 = -1;
+int digit3 = -1;
+int digit4 = -1;
+int ssd_index = 1;
 
 eModes mode = MODE4;
 
@@ -55,8 +56,10 @@ void CNConfig();
 void handle_new_keypad_press(eKey key) ;
 void mode1();
 void mode2();
+void mode4();
 void mode1_input(eKey key);
 void mode2_input(eKey key);
+void mode4_input(eKey key);
 
 void initialize_ports();
 
@@ -97,9 +100,8 @@ int main(void) {
     //LCD_WriteStringAtPos("    Mode 1!     ",1,0);
     LCD_WriteStringAtPos("Mode 4",1,4);
     
-    SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
-    
     CNConfig();
+    SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
 
     /* Other initialization and configuration code */
     while (TRUE) {
@@ -214,7 +216,8 @@ void handle_new_keypad_press(eKey key)
         mode2_input(key);
     break;
     case MODE4:
-        mode4_input(key);   
+        mode4_input(key);
+        break;
     }
 }
 
@@ -254,9 +257,18 @@ void mode2_input(eKey key){
 }
 
 void mode4_input(eKey key){
-    int ssd_index = 1;
+    if (key == K_C) {
+        ssd_index = 1;
+        digit1 = -1;
+        digit2 = -1;
+        digit3 = -1;
+        digit4 = -1;
+    }
     if (ssd_index == 1) { 
         switch(key){
+            case K_D:
+                digit1 = -1;
+                break;
             case K0:
                 digit1 = 0;
                 ssd_index++;
@@ -298,10 +310,170 @@ void mode4_input(eKey key){
                 ssd_index++;
                 break;
         }
+        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
     }
-    else if (ssd_index == 2)
+    else if (ssd_index == 2){
+        switch(key){
+            case K_D:
+                digit1 = -1;
+                ssd_index--;
+                break;
+            case K0:
+                digit2 = 0;
+                ssd_index++;
+                break;
+            case K1:
+                digit2 = 1;
+                ssd_index++;
+                break;
+            case K2: 
+                digit2 = 2;
+                ssd_index++;
+                break;
+            case K3:
+                digit2 = 3;
+                ssd_index++;
+                break;
+            case K4:
+                digit2 = 4;
+                ssd_index++;
+                break;
+            case K5:
+                digit2 = 5;
+                ssd_index++;
+                break;
+            case K6:
+                digit2 = 6;
+                ssd_index++;
+                break;
+            case K7: 
+                digit2 = 7;
+                ssd_index++;
+                break;
+            case K8:
+                digit2 = 8;
+                ssd_index++;
+                break;
+            case K9:
+                digit2 = 9;
+                ssd_index++;
+                break;
+        }
+        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
+    }
+    else if (ssd_index == 3){
+        switch(key){
+            case K_D:
+                digit2 = -1;
+                ssd_index--;
+                break;
+            case K0:
+                digit3 = 0;
+                ssd_index++;
+                break;
+            case K1:
+                digit3 = 1;
+                ssd_index++;
+                break;
+            case K2: 
+                digit3 = 2;
+                ssd_index++;
+                break;
+            case K3:
+                digit3 = 3;
+                ssd_index++;
+                break;
+            case K4:
+                digit3 = 4;
+                ssd_index++;
+                break;
+            case K5:
+                digit3 = 5;
+                ssd_index++;
+                break;
+            case K6:
+                digit3 = 6;
+                ssd_index++;
+                break;
+            case K7: 
+                digit3 = 7;
+                ssd_index++;
+                break;
+            case K8:
+                digit3 = 8;
+                ssd_index++;
+                break;
+            case K9:
+                digit3 = 9;
+                ssd_index++;
+                break;
+        }
+        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
+    }
+    else if (ssd_index == 4){
+        switch(key){
+            case K_D:
+                digit3 = -1;
+                ssd_index--;
+                break;
+            case K0:
+                digit4 = 0;
+                ssd_index++;
+                break;
+            case K1:
+                digit4 = 1;
+                ssd_index++;
+                break;
+            case K2: 
+                digit4 = 2;
+                ssd_index++;
+                break;
+            case K3:
+                digit4 = 3;
+                ssd_index++;
+                break;
+            case K4:
+                digit4 = 4;
+                ssd_index++;
+                break;
+            case K5:
+                digit4 = 5;
+                ssd_index++;
+                break;
+            case K6:
+                digit4 = 6;
+                ssd_index++;
+                break;
+            case K7: 
+                digit4 = 7;
+                ssd_index++;
+                break;
+            case K8:
+                digit4 = 8;
+                ssd_index++;
+                break;
+            case K9:
+                digit4 = 9;
+                ssd_index++;
+                break;
+        }
+        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
+    }
+    else if (ssd_index == 5) {
+        if (key == K_D) {
+            digit4 = -1;
+            ssd_index--;
+        }
+        else if (key == K_E) {
+            play_jingle();
+        }
+        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
+    }  
+    else {
+        LCD_WriteStringAtPos("YOU'RE COOKED",1,0);
+    }
 }
 
-void initialize_ports() {
+void play_jingle() {
     
 }
