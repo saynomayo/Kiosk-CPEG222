@@ -92,6 +92,7 @@ int main(void) {
 
     while (TRUE) 
     {
+        
         //You can put key-pad indepenent mode transition here, such as countdown-driven mode trasition, monitoring of microphone or update of RGB.
     }
 } 
@@ -101,17 +102,15 @@ void CNConfig() {
     /* Make sure vector interrupts is disabled prior to configuration */
     macro_disable_interrupts;
     
-    /* Complete the following configuration of CN interrupts, then uncomment them
-    CNCONDbits.ON = ____;   //all port D pins to trigger CN interrupts
-    CNEND = _______;      	//configure PORTD pins 8-11 as CN pins
-    CNPUD = _______;      	//enable pullups on PORTD pins 8-11
+    CNCONDbits.ON = 1;   //all port D pins to trigger CN interrupts
+    CNEND = 0x0F00;      	//configure PORTD pins 8-11 as CN pins
+    CNPUD = 0x0F00;      	//enable pullups on PORTD pins 8-11
 
-    IPC8bits.CNIP = _______;  	// set CN priority to  5
-    IPC8bits.CNIS = _______;  	// set CN sub-priority to 3
+    IPC8bits.CNIP = 101;  	// set CN priority to  5
+    IPC8bits.CNIS = 11;  	// set CN sub-priority to 3
 
-    IFS1bits.CNDIF = ______;   	//Clear interrupt flag status bit
-    IEC1bits.CNDIE = _____  ;   	//Enable CN interrupt on port D
-    */
+    IFS1bits.CNDIF = 0;   	//Clear interrupt flag status bit
+    IEC1bits.CNDIE = 1;   	//Enable CN interrupt on port D
     
     int j = PORTD;             //read port to clear mismatch on CN pins
     macro_enable_interrupts();	// re-enable interrupts
@@ -146,15 +145,15 @@ void __ISR(_CHANGE_NOTICE_VECTOR) CN_Handler(void) {
         
         // check first row 
         R1 = 0; R2 = R3 = R4 = 1;
-        if (C1 == 0) { /* ... */ }      // first column
-        else if (C2 == 0) { /* ... */ } // second column
-        else if (C3 == 0) { /* ... */ } // third column
-        else if (C4 == 0) { /* ... */ } // fourth column
+        if (C1 == 0) { key = K1; }      // first column
+        else if (C2 == 0) { key = K2; } // second column
+        else if (C3 == 0) { key = K3; } // third column
+        else if (C4 == 0) { key = K_A; } // fourth column
 
         // check second row 
         R2 = 0; R1 = R3 = R4 = 1;
-        if (C1 == 0) { /* ... */ }
-        else if (C2 == 0) { /* ... */ }
+        if (C1 == 0) { key = K4; }
+        else if (C2 == 0) { key = K5; }
         else if (C3 == 0) { /* ... */ }
         else if (C4 == 0) { /* ... */ }
 
