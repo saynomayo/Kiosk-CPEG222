@@ -23,6 +23,7 @@
 #include "config.h" // Basys MX3 configuration header
 #include "lcd.h"    // Digilent Library for using the on-board LCD
 #include "acl.h"    // Digilent Library for using the on-board accelerometer
+#include "ssd.h" // Digilent Library for using the on-board SSD
 
 #define TRUE 1
 #define FALSE 0
@@ -39,9 +40,13 @@
 #define C1 PORTDbits.RD8
 
 typedef enum _KEY {K0, K1, K2, K3, K4, K5, K6, K7, K8, K9, K_A, K_B, K_C, K_D, K_E, K_F, K_NONE} eKey ;
-typedef enum _MODE {MODE1,MODE2} eModes ;
+typedef enum _MODE {MODE1,MODE2,MODE3,MODE4,MODE5,MODE6} eModes ;
+int digit1 = 1;
+int digit2 = 2;
+int digit3 = 3;
+int digit4 = 4;
 
-eModes mode = MODE1;
+eModes mode = MODE4;
 
 char new_press = FALSE;
 
@@ -52,6 +57,8 @@ void mode1();
 void mode2();
 void mode1_input(eKey key);
 void mode2_input(eKey key);
+
+void initialize_ports();
 
 int main(void) {
 
@@ -80,21 +87,23 @@ int main(void) {
     TRISDbits.TRISD10 = 1;
     TRISDbits.TRISD11 = 1;
     
+    //Initialize Visual Outputs
+    SSD_Init();
+    
     // You need to enable all the rows
     R1 = R2 = R3 = R4 = 0;
     
-    LCD_WriteStringAtPos("   Project 3    ",0,0);
-    LCD_WriteStringAtPos("    Mode 1!     ",1,0);
+    LCD_WriteStringAtPos("Group 8",0,4);
+    //LCD_WriteStringAtPos("    Mode 1!     ",1,0);
+    LCD_WriteStringAtPos("Mode 4",1,4);
+    
+    SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
     
     CNConfig();
 
     /* Other initialization and configuration code */
-
-    while (TRUE) 
-    {
-        mode1_input(key);
-        mode2_input(key);
-        //You can put key-pad indepenent mode transition here, such as countdown-driven mode trasition, monitoring of microphone or update of RGB.
+    while (TRUE) {
+        //SSD changed by keypad
     }
 } 
 
@@ -204,6 +213,8 @@ void handle_new_keypad_press(eKey key)
     case MODE2:
         mode2_input(key);
     break;
+    case MODE4:
+        mode4_input(key);   
     }
 }
 
@@ -217,6 +228,11 @@ void mode2(){
     mode = MODE2;
 
     LCD_WriteStringAtPos("    Mode 2!     ",1,0);
+}
+
+void mode4() {
+    mode = MODE4;
+    LCD_WriteStringAtPos("Mode 4",1,4);
 }
 
 void mode1_input(eKey key){
@@ -235,4 +251,57 @@ void mode2_input(eKey key){
             mode1();
         break;
     }
+}
+
+void mode4_input(eKey key){
+    int ssd_index = 1;
+    if (ssd_index == 1) { 
+        switch(key){
+            case K0:
+                digit1 = 0;
+                ssd_index++;
+                break;
+            case K1:
+                digit1 = 1;
+                ssd_index++;
+                break;
+            case K2: 
+                digit1 = 2;
+                ssd_index++;
+                break;
+            case K3:
+                digit1 = 3;
+                ssd_index++;
+                break;
+            case K4:
+                digit1 = 4;
+                ssd_index++;
+                break;
+            case K5:
+                digit1 = 5;
+                ssd_index++;
+                break;
+            case K6:
+                digit1 = 6;
+                ssd_index++;
+                break;
+            case K7: 
+                digit1 = 7;
+                ssd_index++;
+                break;
+            case K8:
+                digit1 = 8;
+                ssd_index++;
+                break;
+            case K9:
+                digit1 = 9;
+                ssd_index++;
+                break;
+        }
+    }
+    else if (ssd_index == 2)
+}
+
+void initialize_ports() {
+    
 }
