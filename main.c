@@ -1,6 +1,6 @@
 /*===================================CPEG222====================================
  * Program:      Project 3 template
- * Authors:     Robert Freeman
+ * Authors:     Raphael Daluz & Mekhai Waples
  * Date:        10/12/2024
  * This is a template that you can use to write your project 3 code, for mid-stage and final demo.
 ==============================================================================*/
