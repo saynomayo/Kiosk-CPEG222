@@ -720,10 +720,10 @@ void mode4_input(eKey key){
             else if (digit1 == order6[0] && digit2 == order6[1] && digit3 == order6[2] && digit4 == order6[3]) {
                 //mode5();
             }
-            else if () {
+            else if (digit1 == order7[0] && digit2 == order7[1] && digit3 == order7[2] && digit4 == order7[3]) {
                 //mode5();
             }
-            else if () {
+            else if (digit1 == order8[0] && digit2 == order8[1] && digit3 == order8[2] && digit4 == order8[3]) {
                 //mode5();
             }
             else {
