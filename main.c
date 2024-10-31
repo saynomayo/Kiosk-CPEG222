@@ -57,11 +57,11 @@ int rDigit4;
 int ssd_index = 1;
 int JINGLE = 0;
 
-char FoodSel;
+char *FoodSel;
 int FoodIndex = 0;
-char* Food1 = "1-Burrito";
-char* Food2 = "2-Taco";
-char* Food3 = "3-Fajita";
+char Food1[] = "1-Burrito";
+char Food2[] = "2-Taco";
+char Food3[] = "3-Fajita";
 
 int order1[];
 int order2[];
@@ -72,14 +72,26 @@ int order6[];
 int order7[];
 int order8[];
 
-char* order1item;
-char* order2item;
-char* order3item;
-char* order4item;
-char* order5item;
-char* order6item;
-char* order7item;
-char* order8item;
+char order1item;
+char order2item;
+char order3item;
+char order4item;
+char order5item;
+char order6item;
+char order7item;
+char order8item;
+
+char orderstatus1;
+char orderstatus2;
+char orderstatus3;
+char orderstatus4;
+char orderstatus5;
+char orderstatus6;
+char orderstatus7;
+char orderstatus8;
+
+char looked_up_item;
+char looked_up_status;
 
 char ERRORMSG;
 
@@ -105,10 +117,16 @@ void JINGLEConfig();
 void handle_new_keypad_press(eKey key) ;
 void mode1();
 void mode2();
+void mode3();
 void mode4();
+void mode5();
+void mode6();
 void mode1_input(eKey key);
 void mode2_input(eKey key);
+void mode3_input(eKey key);
 void mode4_input(eKey key);
+void mode5_input(eKey key);
+void mode6_input(eKey key);
 void TurnOnJingle(void);
 void TurnOffJingle(void);
 
@@ -294,15 +312,21 @@ void handle_new_keypad_press(eKey key)
     {
     case MODE1:
         mode1_input(key);
-    break;
+        break;
     case MODE2:
         mode2_input(key);
-    break;
+        break;
     case MODE3:
         mode3_input(key);
         break;
     case MODE4:
         mode4_input(key);
+        break;
+    case MODE5:
+        mode5_input(key);
+        break;
+    case MODE6:
+        mode6_input(key);
         break;
     }
 }
@@ -325,6 +349,7 @@ void mode2(){
     LCD_WriteStringAtPos(Food1,1,3);
 }
 
+
 void mode3(){
     LCD_WriteStringAtPos("                ",0,0);
     mode = MODE3;
@@ -338,6 +363,27 @@ void mode4() {
     mode = MODE4;
     LCD_WriteStringAtPos("Order Lookup",0,2 );
     LCD_WriteStringAtPos("Enter Code",1,3);
+}
+
+void mode5() {
+    LCD_WriteStringAtPos("                ",0,0);
+    LCD_WriteStringAtPos("                ",1,0);
+    mode = MODE5;
+    /*
+    LCD_WriteStringAtPos("THE FOOD",0,0);
+    LCD_WriteStringAtPos("STATUS",1,0);
+    */
+   
+    LCD_WriteStringAtPos(looked_up_item,0,0);
+    LCD_WriteStringAtPos(looked_up_status,1,0);
+    
+}
+
+void mode6() {
+    LCD_WriteStringAtPos("                ",0,0);
+    LCD_WriteStringAtPos("                ",1,0);
+    mode = MODE6;
+    LCD_WriteStringAtPos(ERRORMSG,1,0);
 }
 
 void mode1_input(eKey key){
@@ -377,73 +423,7 @@ void mode2_input(eKey key){
             rDigit2 = rand() % 10;
             rDigit3 = rand() % 10;
             rDigit4 = rand() % 10;
-            switch (QueuePos) {
-                case (1):
-                    order1[0] = rDigit1;
-                    order1[1] = rDigit2;
-                    order1[2] = rDigit3;
-                    order1[3] = rDigit4;
-                    order1item = FoodSel;
-                    SSD_WriteDigits(order1[3],order1[2],order1[1],order1[0],0,0,0,0);
-                    break;
-                case (2):
-                    order2[0] = rDigit1;
-                    order2[1] = rDigit2;
-                    order2[2] = rDigit3;
-                    order2[3] = rDigit4;
-                    order2item = FoodSel;
-                    SSD_WriteDigits(order2[3],order2[2],order2[1],order2[0],0,0,0,0);
-                    break;
-                case(3):
-                    order3[0] = rDigit1;
-                    order3[1] = rDigit2;
-                    order3[2] = rDigit3;
-                    order3[3] = rDigit4;
-                    order3item = FoodSel;
-                    SSD_WriteDigits(order3[3],order3[2],order3[1],order3[0],0,0,0,0);
-                    break;
-                case(4):
-                    order4[0] = rDigit1;
-                    order4[1] = rDigit2;
-                    order4[2] = rDigit3;
-                    order4[3] = rDigit4;
-                    order4item = FoodSel;
-                    SSD_WriteDigits(order4[3],order4[2],order4[1],order4[0],0,0,0,0);
-                    break;
-                case(5):
-                    order5[0] = rDigit1;
-                    order5[1] = rDigit2;
-                    order5[2] = rDigit3;
-                    order5[3] = rDigit4;
-                    order5item = FoodSel;
-                    SSD_WriteDigits(order5[3],order5[2],order5[1],order5[0],0,0,0,0);
-                    break;
-                case(6):
-                    order6[0] = rDigit1;
-                    order6[1] = rDigit2;
-                    order6[2] = rDigit3;
-                    order6[3] = rDigit4;
-                    order6item = FoodSel;
-                    SSD_WriteDigits(order6[3],order6[2],order6[1],order6[0],0,0,0,0);
-                    break;
-                case(7):
-                    order7[0] = rDigit1;
-                    order7[1] = rDigit2;
-                    order7[2] = rDigit3;
-                    order7[3] = rDigit4;
-                    order7item = FoodSel;
-                    SSD_WriteDigits(order7[3],order7[2],order7[1],order7[0],0,0,0,0);
-                    break;
-                case(8):
-                    order8[0] = rDigit1;
-                    order8[1] = rDigit2;
-                    order8[2] = rDigit3;
-                    order8[3] = rDigit4;
-                    order8item = FoodSel;
-                    SSD_WriteDigits(order8[3],order8[2],order8[1],order8[0],0,0,0,0);
-                    break;
-                QueuePos++;
-            }
+            
             if (FoodIndex == 0) {
                 LCD_WriteStringAtPos("                ",1,0);
                 LCD_WriteStringAtPos("Burrito",1,4);
@@ -464,6 +444,82 @@ void mode2_input(eKey key){
                 LCD_WriteStringAtPos("                ",1,0);
                 LCD_WriteStringAtPos("Ur Cooked",1,3);
             }
+             
+            switch (QueuePos) {
+                case (1):
+                    order1[0] = rDigit1;
+                    order1[1] = rDigit2;
+                    order1[2] = rDigit3;
+                    order1[3] = rDigit4;
+                    order1item = &FoodSel;
+                    orderstatus1 = "In Queue";
+                    SSD_WriteDigits(order1[3],order1[2],order1[1],order1[0],0,0,0,0);
+                    break;
+                case (2):
+                    order2[0] = rDigit1;
+                    order2[1] = rDigit2;
+                    order2[2] = rDigit3;
+                    order2[3] = rDigit4;
+                    order2item = &FoodSel;
+                    orderstatus2 = "In Queue";
+                    SSD_WriteDigits(order2[3],order2[2],order2[1],order2[0],0,0,0,0);
+                    break;
+                case(3):
+                    order3[0] = rDigit1;
+                    order3[1] = rDigit2;
+                    order3[2] = rDigit3;
+                    order3[3] = rDigit4;
+                    order3item = &FoodSel;
+                    orderstatus3 = "In Queue";
+                    SSD_WriteDigits(order3[3],order3[2],order3[1],order3[0],0,0,0,0);
+                    break;
+                case(4):
+                    order4[0] = rDigit1;
+                    order4[1] = rDigit2;
+                    order4[2] = rDigit3;
+                    order4[3] = rDigit4;
+                    order4item = &FoodSel;
+                    orderstatus4 = "In Queue";
+                    SSD_WriteDigits(order4[3],order4[2],order4[1],order4[0],0,0,0,0);
+                    break;
+                case(5):
+                    order5[0] = rDigit1;
+                    order5[1] = rDigit2;
+                    order5[2] = rDigit3;
+                    order5[3] = rDigit4;
+                    order5item = &FoodSel;
+                    orderstatus5 = "In Queue";
+                    SSD_WriteDigits(order5[3],order5[2],order5[1],order5[0],0,0,0,0);
+                    break;
+                case(6):
+                    order6[0] = rDigit1;
+                    order6[1] = rDigit2;
+                    order6[2] = rDigit3;
+                    order6[3] = rDigit4;
+                    order6item = &FoodSel;
+                    orderstatus6 = "In Queue";
+                    SSD_WriteDigits(order6[3],order6[2],order6[1],order6[0],0,0,0,0);
+                    break;
+                case(7):
+                    order7[0] = rDigit1;
+                    order7[1] = rDigit2;
+                    order7[2] = rDigit3;
+                    order7[3] = rDigit4;
+                    order7item = &FoodSel;
+                    orderstatus7 = "In Queue";
+                    SSD_WriteDigits(order7[3],order7[2],order7[1],order7[0],0,0,0,0);
+                    break;
+                case(8):
+                    order8[0] = rDigit1;
+                    order8[1] = rDigit2;
+                    order8[2] = rDigit3;
+                    order8[3] = rDigit4;
+                    order8item = &FoodSel;
+                    orderstatus8 = "In Queue";
+                    SSD_WriteDigits(order8[3],order8[2],order8[1],order8[0],0,0,0,0);
+                    break;
+            }
+            QueuePos++;
             mode3();
         break;
     }
@@ -701,45 +757,66 @@ void mode4_input(eKey key){
             ssd_index--;
         }
         else if (key == K_E) {
-            ssd_index = 1;
             if (digit1 == order1[0] && digit2 == order1[1] && digit3 == order1[2] && digit4 == order1[3]) {
-                //mode5();
+                looked_up_item = order1item ;
+                looked_up_status = orderstatus1;
+                mode5();
             }
             else if (digit1 == order2[0] && digit2 == order2[1] && digit3 == order2[2] && digit4 == order2[3]) {
-                //mode5();
+                looked_up_item = order2item ;
+                looked_up_status = orderstatus2 ;
+                mode5();
             }
             else if (digit1 == order3[0] && digit2 == order3[1] && digit3 == order3[2] && digit4 == order3[3]) {
-                //mode5();
+                looked_up_item = order3item ;
+                looked_up_status = orderstatus3 ;
+                mode5();
             }
             else if (digit1 == order4[0] && digit2 == order4[1] && digit3 == order4[2] && digit4 == order4[3]) {
-                //mode5();
+                looked_up_item = order4item;
+                looked_up_status = orderstatus4;
+                mode5();
             }
             else if (digit1 == order5[0] && digit2 == order5[1] && digit3 == order5[2] && digit4 == order5[3]) {
-                //mode5();
+                looked_up_item = order5item ;
+                looked_up_status = orderstatus5 ;
+                mode5();
             }
             else if (digit1 == order6[0] && digit2 == order6[1] && digit3 == order6[2] && digit4 == order6[3]) {
-                //mode5();
+                looked_up_item = order6item ;
+                looked_up_status = orderstatus6 ;
+                mode5();
             }
             else if (digit1 == order7[0] && digit2 == order7[1] && digit3 == order7[2] && digit4 == order7[3]) {
-                //mode5();
+                looked_up_item = order7item ;
+                looked_up_status = orderstatus7 ;
+                mode5();
             }
             else if (digit1 == order8[0] && digit2 == order8[1] && digit3 == order8[2] && digit4 == order8[3]) {
-                //mode5();
+                looked_up_item = order8item ;
+                looked_up_status = orderstatus8 ;
+                mode5();
             }
             else {
                 ERRORMSG = "Invalid Code";
-                //mode6();
+                mode6();
             }
-            digit1 = -1;
-            digit2 = -1;
-            digit3 = -1;
-            digit4 = -1;
         }
         SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
     }  
     else {
         LCD_WriteStringAtPos("YOU'RE COOKED",1,0);
     }
+}
+
+void mode5_input(eKey key) {
+    if (key == K_E){
+        mode1();
+    }
+}
+
+void mode6_input(eKey key) {
+    //pass
 }
 
 void JINGLEConfig(void) {
