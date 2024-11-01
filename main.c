@@ -18,13 +18,14 @@
 /*----------------------------------------------------------------------------*/
 
 #include <xc.h>   //Microchip XC processor header which links to the PIC32MX370512L header
-#include <stdio.h>  // need this for sprintf
+#include <stdio.h>  // n=d this for sprintf
 #include <sys/attribs.h>
 #include "config.h" // Basys MX3 configuration header
 #include "lcd.h"    // Digilent Library for using the on-board LCD
 #include "acl.h"    // Digilent Library for using the on-board accelerometer
 #include "ssd.h" // Digilent Library for using the on-board SSD
 #include "led.h"
+#include <string.h>
 
 #define TRUE 1
 #define FALSE 0
@@ -43,59 +44,54 @@
 #define RGSIN_SIZE  (sizeof(rgSinSamples) / sizeof(rgSinSamples[0]))
 #define TMR_FREQ_SINE   48000 // 48 kHz
 
-typedef enum _KEY {K0, K1, K2, K3, K4, K5, K6, K7, K8, K9, K_A, K_B, K_C, K_D, K_E, K_F, K_NONE} eKey ;
-typedef enum _MODE {MODE1,MODE2,MODE3,MODE4,MODE5,MODE6} eModes ;
+typedef enum _KEY {K0, K1, K2, K3, K4, K5, K6, K7, K8, K9, K_A, K_B, K_C, K_D, K_E, K_F, K_NONE} eKey ; //keypad keys
+
+typedef enum _MODE {MAINMENU,ORDERING,ORDERCONFIRM,LOOKUP,ORDERINFO,ERROR} eModes ; //system modes
+
+//struct declaration for Order
+typedef struct {
+            int pos; 
+            int time;
+            char status[16]; 
+            char item[16]; 
+            int code[4];
+            } Order;
+
 int seconds = 0;
-int digit1 = -1;
-int digit2 = -1;
-int digit3 = -1;
-int digit4 = -1;
-int rDigit1;
-int rDigit2;
-int rDigit3;
-int rDigit4;
+
+//code typed and generated
+int code[4] = {-1, -1, -1, -1};
+int rCode[4];
+
+int compareCodes(Order queue[], int lookupcode[]);
+
+//lookup globals
+char *LOOKUPITEM;
+char *LOOKUPSTATUS;
+
+//error msg
+char *QUEUEFULL = "Queue is full";
+char *INVALIDCODE = "Invalid Code";
+
+//Queue stuff
+int QUEUESIZE = 0;
+Order queue[];
+void queueOrder(Order newOrder, Order queue[], int QUEUESIZE);
+Order createOrder(const char* item, int QUEUESIZE);
+int PREPPING = 0;
+int ORDERFOUND = 0;
+int WAITINGPOSITION = -1;
+int REPLACEINDEX;
+int REPLACE=0;
+
+//food info
+int menuindex = 0;
+char menu[3][16] = {"1-Burrito", "2-Taco", "3-Fajita"};
+char items[3][16] = {"Burrito", "Taco", "Fajita"};
+
+//variables for convention's sake
 int ssd_index = 1;
 int JINGLE = 0;
-
-char FoodSel;
-int FoodIndex = 0;
-char Food1[] = "1-Burrito";
-char Food2[] = "2-Taco";
-char Food3[] = "3-Fajita";
-
-int order1[];
-int order2[];
-int order3[];
-int order4[];
-int order5[];
-int order6[];
-int order7[];
-int order8[];
-
-char order1item;
-char order2item;
-char order3item;
-char order4item;
-char order5item;
-char order6item;
-char order7item;
-char order8item;
-
-char orderstatus1;
-char orderstatus2;
-char orderstatus3;
-char orderstatus4;
-char orderstatus5;
-char orderstatus6;
-char orderstatus7;
-char orderstatus8;
-
-char looked_up_item;
-char looked_up_status;
-
-char ERRORMSG;
-
-int QueuePos = 1;
 
 int cntAudioBuf, idxAudioBuf;
 
@@ -106,34 +102,52 @@ unsigned short rgSinSamples [] = {200, 200, 200, 200, 200, 200, 200,
                                   200, 200, 200, 200, 200, 0, 0,
                                   0, 0, 0};
 
-eModes mode = MODE1;
+eModes mode = MAINMENU;
 
 char new_press = FALSE;
 
 // subrountines
-void CNConfig();
-void TIMERConfig();
-void JINGLEConfig();
-void handle_new_keypad_press(eKey key) ;
-void mode1();
-void mode2();
-void mode3();
-void mode4();
-void mode5();
-void mode6();
-void mode1_input(eKey key);
-void mode2_input(eKey key);
-void mode3_input(eKey key);
-void mode4_input(eKey key);
-void mode5_input(eKey key);
-void mode6_input(eKey key);
-void TurnOnJingle(void);
-void TurnOffJingle(void);
+// interrupt configs
+void interruptCONFIG();
 
-void initialize_ports();
+//input handler
+void handle_new_keypad_press(eKey key) ;
+
+//mode functionality
+void mainmenu();
+void ordering();
+void orderconfirm();
+void lookup();
+void orderinfo();
+void error(char *message);
+
+//mode input interfacing
+void mainmenu_input(eKey key);
+void ordering_input(eKey key);
+void orderconfirm_input(eKey key);
+void lookup_input(eKey key);
+void orderinfo_input(eKey key);
+void error_input(eKey key);
+
+//functions to turn jingle on and off
+void TurnOffJingle(void);
+void TurnOnJingle(void);
+
+void initializePORTS(void);
 
 int main(void) {
 
+    initializePORTS();
+    interruptCONFIG();
+    
+    mainmenu();
+    /* Other initialization and configuration code */
+    while (TRUE) {
+        
+    }
+} 
+
+void initializePORTS() {
     /* Initialization of LED, LCD, SSD, etc */
     DDPCONbits.JTAGEN = 0; // Required to use Pin RA0 (connected to LED 0) as IO
     LCD_Init() ;
@@ -163,42 +177,24 @@ int main(void) {
     SSD_Init();
     LED_Init();
     
+    SSD_WriteDigits(code[3], code[2], code[1], code[0], 0, 0, 0, 0);
+    
     // You need to enable all the rows
     R1 = R2 = R3 = R4 = 0;
-    
-    CNConfig();
-    TIMERConfig();
-    JINGLEConfig();
-    
-    SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
-    mode1();
-    /* Other initialization and configuration code */
-    while (TRUE) {
-        
-    }
-} 
+}
 
-
-void CNConfig() {
-    /* Make sure vector interrupts is disabled prior to configuration */
+void interruptCONFIG() {
     macro_disable_interrupts;
-    
     CNCONDbits.ON = 1;   //all port D pins to trigger CN interrupts
     CNEND = 0x0F00;      	//configure PORTD pins 8-11 as CN pins
     CNPUD = 0x0F00;      	//enable pullups on PORTD pins 8-11
 
-    IPC8bits.CNIP = 101;  	// set CN priority to  5
-    IPC8bits.CNIS = 11;  	// set CN sub-priority to 3
+    IPC8bits.CNIP = 5;  	// set CN priority to  5
+    IPC8bits.CNIS = 3;  	// set CN sub-priority to 3
 
     IFS1bits.CNDIF = 0;   	//Clear interrupt flag status bit
     IEC1bits.CNDIE = 1;   	//Enable CN interrupt on port D
     
-    int j = PORTD;             //read port to clear mismatch on CN pins
-    macro_enable_interrupts();	// re-enable interrupts
-}
-
-void TIMERConfig() {
-    macro_disable_interrupts;
     T2CONbits.ON = 0;
     T2CONbits.TCKPS = 0b111;
     T2CONbits.TCS = 0;
@@ -209,13 +205,36 @@ void TIMERConfig() {
     IFS0bits.T2IF = 0;
     IEC0bits.T2IE = 1;
     T2CONbits.ON = 1;
+    
+     // the following lines configure interrupts to control the speaker
+    T3CONbits.ON = 0;       // turn off Timer3
+    OC1CONbits.ON = 0;      // Turn off OC1
+        /* The following code sets up the alarm timer and interrupts */
+    tris_A_OUT = 0;    
+    rp_A_OUT = 0x0C; // 1100 = OC1
+        // disable analog (set pins as digital)
+    ansel_A_OUT = 0;
+    
+    T3CONbits.TCKPS = 0;     //1:1 prescale value
+    T3CONbits.TGATE = 0;     //not gated input (the default)
+    T3CONbits.TCS = 0;       //PCBLK input (the default)
+    
+    OC1CONbits.ON = 0;       // Turn off OC1 while doing setup.
+    OC1CONbits.OCM = 6;      // PWM mode on OC1; Fault pin is disabled
+    OC1CONbits.OCTSEL = 1;   // Timer3 is the clock source for this Output Compare module
+    
+    IPC3bits.T3IP = 7;      // interrupt priority
+    IPC3bits.T3IS = 3;      // interrupt subpriority
+    
+    int j = PORTD;             //read port to clear mismatch on CN pins
     macro_enable_interrupts();
 }
 
 void __ISR(_TIMER_2_VECTOR) TM_HANDLER(void) {
-    LATA = (0xFF00 | 0xFF >> (seconds%9));
-    seconds++;
-    TurnOffJingle();
+    ledStatuses();
+    updateStatuses();
+    seconds++; // increment seconds each second
+    TurnOffJingle(); // turn off jingle every second
     IFS0bits.T2IF = 0;
     macro_enable_interrupts();
 }
@@ -305,567 +324,521 @@ void __ISR(_CHANGE_NOTICE_VECTOR) CN_Handler(void) {
 }
 
 
-
+//based on system mode, call input functions with key pressed as argument
 void handle_new_keypad_press(eKey key)
 {
-    switch (mode)
+    switch (mode) //check what the system mode is
     {
-    case MODE1:
-        mode1_input(key);
+    case MAINMENU:
+        mainmenu_input(key);
+    break;
+    case ORDERING:
+        ordering_input(key);
+    break;
+    case ORDERCONFIRM:
+        orderconfirm_input(key);
+    break;       
+    case LOOKUP:
+        lookup_input(key);
         break;
-    case MODE2:
-        mode2_input(key);
+    case ORDERINFO:
+        orderinfo_input(key);
         break;
-    case MODE3:
-        mode3_input(key);
-        break;
-    case MODE4:
-        mode4_input(key);
-        break;
-    case MODE5:
-        mode5_input(key);
-        break;
-    case MODE6:
-        mode6_input(key);
+    case ERROR:
+        error_input(key);
         break;
     }
 }
 
-void mode1(){
-    LCD_WriteStringAtPos("                ",0,0);
-    LCD_WriteStringAtPos("                ",1,0);
-    mode = MODE1;
-    LCD_WriteStringAtPos("Select Mode",0,2);
+//main menu | mode 1
+void mainmenu(){
+    LCD_WriteStringAtPos("                ",0,0); //anytime this pattern is seen
+    LCD_WriteStringAtPos("                ",1,0); // it's to clear the LCD
+    
+    mode = MAINMENU;
+    
+    SSD_WriteDigits(-1, -1, -1, -1, 0, 0, 0, 0); // anytime this pattern is seen, it's to clear SSD
+    LCD_WriteStringAtPos("Select Mode",0,0);
     LCD_WriteStringAtPos("A-Place B-Status",1,0);
-    SSD_WriteDigits(-1,-1,-1,-1,0,0,0,0);
-    
 }
 
-void mode2(){
+//placing an order
+void ordering(){
+    menuindex = 0;
     LCD_WriteStringAtPos("                ",0,0);
     LCD_WriteStringAtPos("                ",1,0);
-    mode = MODE2;
+    mode = ORDERING;
+
     LCD_WriteStringAtPos("Place Your Order",0,0);
-    LCD_WriteStringAtPos(Food1,1,3);
+    LCD_WriteStringAtPos(menu[0],1,3); //when first ordering, the first item in the menu is shown
 }
 
-
-void mode3(){
+//order is placed
+void orderconfirm() {
     LCD_WriteStringAtPos("                ",0,0);
-    mode = MODE3;
-    TurnOnJingle();
+    LCD_WriteStringAtPos("                ",1,0);
+    mode = ORDERCONFIRM;
+    TurnOnJingle(); // plays jingle, automatically turns off when the clock edge occurs for the timer interrupt, so may last anywhere from 0.1s - 1.0s
+    
     LCD_WriteStringAtPos("Order Placed For",0,0);
+    LCD_WriteStringAtPos(items[menuindex],1,4); // displays item in menu that was selected, without number attached
 }
 
-void mode4() {
+//looking up order
+void lookup() {
+    code[0] = -1; // this patterns clears the user typed code each time the user goes to lookup orders
+    code[1] = -1;
+    code[2] = -1;
+    code[3] = -1;
     LCD_WriteStringAtPos("                ",0,0);
     LCD_WriteStringAtPos("                ",1,0);
-    mode = MODE4;
-    LCD_WriteStringAtPos("Order Lookup",0,2 );
-    LCD_WriteStringAtPos("Enter Code",1,3);
+    mode = LOOKUP;
+    
+    LCD_WriteStringAtPos("Order Lookup",0,0);
+    LCD_WriteStringAtPos("Enter Code",1,0);
 }
 
-void mode5() {
+//order info shown for order looked up
+void orderinfo() {
     LCD_WriteStringAtPos("                ",0,0);
     LCD_WriteStringAtPos("                ",1,0);
-    mode = MODE5;
-    /*
-    LCD_WriteStringAtPos("THE FOOD",0,0);
-    LCD_WriteStringAtPos("STATUS",1,0);
-    */
-    if (looked_up_item == ("Burrito")){
-        LCD_WriteStringAtPos("Burrito",0,0);
+    mode = ORDERINFO;
+    if (strcmp(LOOKUPITEM, "Burrito") == 0) { //this pattern checks what the item is for the order looked up
+        LCD_WriteStringAtPos("Burrito",0,3); // and then displays the item
     }
-    else if (looked_up_item == ("Taco")){
-        LCD_WriteStringAtPos("Taco",0,0);
+    else if (strcmp(LOOKUPITEM, "Taco") == 0) {
+        LCD_WriteStringAtPos("Taco",0,5);
     }
-    else if (looked_up_item == ("Fajita")){
-        LCD_WriteStringAtPos("Fajita",0,0);
-    }
-    else{
-        LCD_WriteStringAtPos("LOOKED UP ITEM NOT EQUAL",0,0);
+    else if (strcmp(LOOKUPITEM, "Fajita") == 0) {
+        LCD_WriteStringAtPos("Fajita",0,4);
     }
     
-    if (looked_up_status == ("In Queue")){
-        LCD_WriteStringAtPos("In Queue",1,0);
+    else {
+        LCD_WriteStringAtPos("Err",0,0);
     }
-    else if (looked_up_status == ("In Prep")){
+    
+    if (strcmp(LOOKUPSTATUS, "In Queue") == 0) { // this pattern checks the status of the order looked u[]
+        LCD_WriteStringAtPos("In Queue",1,4); // and then displays the status
+    }
+    else if (strcmp(LOOKUPSTATUS, "In Prep") == 0) {
         LCD_WriteStringAtPos("In Prep",1,0);
     }
-    else if (looked_up_status == ("Ready")){
+    else if (strcmp(LOOKUPSTATUS, "Ready") == 0) {
         LCD_WriteStringAtPos("Ready",1,0);
     }
-    else{
-        LCD_WriteStringAtPos("LOOKED UP STATUS NOT EQUAL",1,0);
+    else {
+        LCD_WriteStringAtPos("Err",1,0);
     }
-    
 }
-
-void mode6() {
+//error protocol, takes a message as an argument and displays the error
+void error(char *message) {
     LCD_WriteStringAtPos("                ",0,0);
     LCD_WriteStringAtPos("                ",1,0);
-    mode = MODE6;
-    LCD_WriteStringAtPos(ERRORMSG,1,0);
+    mode = ERROR;
+    LCD_WriteStringAtPos("Error!",0,5);
+    LCD_WriteStringAtPos(message,1,1); // displays the error message passed to error()
 }
-
-void mode1_input(eKey key){
+//handles input in main menu
+void mainmenu_input(eKey key){
     //Go to mode 2 if A key is pressed
     switch(key){
         case K_A:
-            if (QueuePos > 8) {
-                //mode6();
-            }
-            else {
-                mode2();
-            }
+            checkReady();
         break;
         case K_B:
-            mode4();
-        break;
+            lookup(); // goes to lookup mode
     }
 }
-
-void mode2_input(eKey key){
-    //Cycles through the menu selections
+//handles input while ordering / scrolling thru menu
+void ordering_input(eKey key){
+    //wrap through menu items, select menu item
     switch(key){
-        case (K_A):
-            FoodIndex++;
-            if (FoodIndex > 2) {
-                FoodIndex = 0 ;
-            }
-        break;
-        case (K_B):
-            FoodIndex--;
-            if (FoodIndex < 0) {
-                FoodIndex = 2 ;
-            }
-        break;
-        case (K_E):
-            rDigit1 = rand() % 10;
-            rDigit2 = rand() % 10;
-            rDigit3 = rand() % 10;
-            rDigit4 = rand() % 10;
-            
-            if (FoodIndex == 0) {
-                LCD_WriteStringAtPos("                ",1,0);
-                LCD_WriteStringAtPos("Burrito",1,4);
-                FoodSel = "Burrito";
-                
-            }
-            else if (FoodIndex == 1) {
-                LCD_WriteStringAtPos("                ",1,0);
-                LCD_WriteStringAtPos("Taco",1,5);
-                FoodSel = "Taco";
-            }
-            else if (FoodIndex == 2) {
-                LCD_WriteStringAtPos("                ",1,0);
-                LCD_WriteStringAtPos("Fajita",1,5);
-                FoodSel = "Fajita";
+        case K_A: 
+            if (menuindex == 2) {
+                menuindex = 0; // wraps back to first menu item
             }
             else {
-                LCD_WriteStringAtPos("                ",1,0);
-                LCD_WriteStringAtPos("Ur Cooked",1,3);
+                menuindex++; // goes to next menu item
             }
-             
-            switch (QueuePos) {
-                case (1):
-                    order1[0] = rDigit1;
-                    order1[1] = rDigit2;
-                    order1[2] = rDigit3;
-                    order1[3] = rDigit4;
-                    order1item = FoodSel;
-                    orderstatus1 = "In Queue";
-                    SSD_WriteDigits(order1[3],order1[2],order1[1],order1[0],0,0,0,0);
-                    break;
-                case (2):
-                    order2[0] = rDigit1;
-                    order2[1] = rDigit2;
-                    order2[2] = rDigit3;
-                    order2[3] = rDigit4;
-                    order2item = FoodSel;
-                    orderstatus2 = "In Queue";
-                    SSD_WriteDigits(order2[3],order2[2],order2[1],order2[0],0,0,0,0);
-                    break;
-                case(3):
-                    order3[0] = rDigit1;
-                    order3[1] = rDigit2;
-                    order3[2] = rDigit3;
-                    order3[3] = rDigit4;
-                    order3item = FoodSel;
-                    orderstatus3 = "In Queue";
-                    SSD_WriteDigits(order3[3],order3[2],order3[1],order3[0],0,0,0,0);
-                    break;
-                case(4):
-                    order4[0] = rDigit1;
-                    order4[1] = rDigit2;
-                    order4[2] = rDigit3;
-                    order4[3] = rDigit4;
-                    order4item = FoodSel;
-                    orderstatus4 = "In Queue";
-                    SSD_WriteDigits(order4[3],order4[2],order4[1],order4[0],0,0,0,0);
-                    break;
-                case(5):
-                    order5[0] = rDigit1;
-                    order5[1] = rDigit2;
-                    order5[2] = rDigit3;
-                    order5[3] = rDigit4;
-                    order5item = FoodSel;
-                    orderstatus5 = "In Queue";
-                    SSD_WriteDigits(order5[3],order5[2],order5[1],order5[0],0,0,0,0);
-                    break;
-                case(6):
-                    order6[0] = rDigit1;
-                    order6[1] = rDigit2;
-                    order6[2] = rDigit3;
-                    order6[3] = rDigit4;
-                    order6item = FoodSel;
-                    orderstatus6 = "In Queue";
-                    SSD_WriteDigits(order6[3],order6[2],order6[1],order6[0],0,0,0,0);
-                    break;
-                case(7):
-                    order7[0] = rDigit1;
-                    order7[1] = rDigit2;
-                    order7[2] = rDigit3;
-                    order7[3] = rDigit4;
-                    order7item = FoodSel;
-                    orderstatus7 = "In Queue";
-                    SSD_WriteDigits(order7[3],order7[2],order7[1],order7[0],0,0,0,0);
-                    break;
-                case(8):
-                    order8[0] = rDigit1;
-                    order8[1] = rDigit2;
-                    order8[2] = rDigit3;
-                    order8[3] = rDigit4;
-                    order8item = FoodSel;
-                    orderstatus8 = "In Queue";
-                    SSD_WriteDigits(order8[3],order8[2],order8[1],order8[0],0,0,0,0);
-                    break;
+            LCD_WriteStringAtPos("                ",1,0);
+            LCD_WriteStringAtPos(menu[menuindex],1,3); // displays menu item
+        break;
+        case K_B:
+            if (menuindex == 0) {
+                menuindex = 2; // wraps to last menu item
             }
-            QueuePos++;
-            mode3();
+            else {
+                menuindex--; // goes to last menu item
+            }
+            LCD_WriteStringAtPos("                ",1,0);
+            LCD_WriteStringAtPos(menu[menuindex],1,3); // displays menu item
+            break;
+        case K_E:
+            LCD_WriteStringAtPos("                ",1,0);
+            if (REPLACE) {
+                queueOrder(createOrder(items[menuindex], REPLACEINDEX), queue, REPLACEINDEX);
+                SSD_WriteDigits(queue[REPLACEINDEX].code[3], // writes order code to digits
+                            queue[REPLACEINDEX].code[2], 
+                            queue[REPLACEINDEX].code[1], 
+                            queue[REPLACEINDEX].code[0], 
+                            0, 0, 0, 0);
+                REPLACE = 0;
+            }
+            else {
+                queueOrder(createOrder(items[menuindex], QUEUESIZE), queue, QUEUESIZE); // creates order and adds to queue
+                SSD_WriteDigits(queue[QUEUESIZE].code[3], // writes order code to digits
+                            queue[QUEUESIZE].code[2], 
+                            queue[QUEUESIZE].code[1], 
+                            queue[QUEUESIZE].code[0], 
+                            0, 0, 0, 0);
+            }
+            if (QUEUESIZE < 8) {
+                QUEUESIZE++;
+            }
+            orderconfirm(); // moves to orderconfirm mode
         break;
     }
-    if (mode == MODE2){ 
-        if (FoodIndex == 0) {
-            LCD_WriteStringAtPos("                ",1,0);
-            LCD_WriteStringAtPos(Food1,1,3);
-        }
-        else if (FoodIndex == 1) {
-            LCD_WriteStringAtPos("                ",1,0);
-            LCD_WriteStringAtPos(Food2,1,3);
-        }
-        else if (FoodIndex == 2) {
-            LCD_WriteStringAtPos("                ",1,0);
-            LCD_WriteStringAtPos(Food3,1,3);
-        }
-        else {
-            LCD_WriteStringAtPos("                ",1,0);
-            LCD_WriteStringAtPos("Ur Cooked",1,3);
-        }
-    }
 }
-
-void mode3_input(eKey key) {
+// handled input for confirming order
+void orderconfirm_input(eKey key){
     if (key == K_E) {
-        mode1();
+        mainmenu(); // moves to main menu
     }
 }
-void mode4_input(eKey key){
-    if (key == K_C) {
+//handles input for looking up order
+void lookup_input(eKey key){
+    if (key == K_C) { // clears SSD and returns 'cursor' to first digit of SSD
         ssd_index = 1;
-        digit1 = -1;
-        digit2 = -1;
-        digit3 = -1;
-        digit4 = -1;
+        code[0] = -1;
+        code[1] = -1;
+        code[2] = -1;
+        code[3] = -1;
     }
     if (ssd_index == 1) { 
         switch(key){
             case K_D:
-                digit1 = -1;
+                code[0] = -1; // deletes first digit of SSD, this pattern is repeated
                 break;
             case K0:
-                digit1 = 0;
-                ssd_index++;
+                code[0] = 0;
+                ssd_index++; // moves to next digit of SSD, this pattern is repeated
                 break;
             case K1:
-                digit1 = 1;
+                code[0] = 1;
                 ssd_index++;
                 break;
             case K2: 
-                digit1 = 2;
+                code[0] = 2;
                 ssd_index++;
                 break;
             case K3:
-                digit1 = 3;
+                code[0] = 3;
                 ssd_index++;
                 break;
             case K4:
-                digit1 = 4;
+                code[0] = 4;
                 ssd_index++;
                 break;
             case K5:
-                digit1 = 5;
+                code[0] = 5;
                 ssd_index++;
                 break;
             case K6:
-                digit1 = 6;
+                code[0] = 6;
                 ssd_index++;
                 break;
             case K7: 
-                digit1 = 7;
+                code[0] = 7;
                 ssd_index++;
                 break;
             case K8:
-                digit1 = 8;
+                code[0] = 8;
                 ssd_index++;
                 break;
             case K9:
-                digit1 = 9;
+                code[0] = 9;
                 ssd_index++;
                 break;
         }
-        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
+        SSD_WriteDigits(code[3], code[2], code[1], code[0], 0, 0, 0, 0);
     }
     else if (ssd_index == 2){
         switch(key){
             case K_D:
-                digit1 = -1;
+                code[0] = -1;
                 ssd_index--;
                 break;
             case K0:
-                digit2 = 0;
+                code[1] = 0;
                 ssd_index++;
                 break;
             case K1:
-                digit2 = 1;
+                code[1] = 1;
                 ssd_index++;
                 break;
             case K2: 
-                digit2 = 2;
+                code[1] = 2;
                 ssd_index++;
                 break;
             case K3:
-                digit2 = 3;
+                code[1] = 3;
                 ssd_index++;
                 break;
             case K4:
-                digit2 = 4;
+                code[1] = 4;
                 ssd_index++;
                 break;
             case K5:
-                digit2 = 5;
+                code[1] = 5;
                 ssd_index++;
                 break;
             case K6:
-                digit2 = 6;
+                code[1] = 6;
                 ssd_index++;
                 break;
             case K7: 
-                digit2 = 7;
+                code[1] = 7;
                 ssd_index++;
                 break;
             case K8:
-                digit2 = 8;
+                code[1] = 8;
                 ssd_index++;
                 break;
             case K9:
-                digit2 = 9;
+                code[1] = 9;
                 ssd_index++;
                 break;
         }
-        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
+        SSD_WriteDigits(code[3], code[2], code[1], code[0], 0, 0, 0, 0);
     }
     else if (ssd_index == 3){
         switch(key){
             case K_D:
-                digit2 = -1;
+                code[1] = -1;
                 ssd_index--;
                 break;
             case K0:
-                digit3 = 0;
+                code[2] = 0;
                 ssd_index++;
                 break;
             case K1:
-                digit3 = 1;
+                code[2] = 1;
                 ssd_index++;
                 break;
             case K2: 
-                digit3 = 2;
+                code[2] = 2;
                 ssd_index++;
                 break;
             case K3:
-                digit3 = 3;
+                code[2] = 3;
                 ssd_index++;
                 break;
             case K4:
-                digit3 = 4;
+                code[2] = 4;
                 ssd_index++;
                 break;
             case K5:
-                digit3 = 5;
+                code[2] = 5;
                 ssd_index++;
                 break;
             case K6:
-                digit3 = 6;
+                code[2] = 6;
                 ssd_index++;
                 break;
             case K7: 
-                digit3 = 7;
+                code[2] = 7;
                 ssd_index++;
                 break;
             case K8:
-                digit3 = 8;
+                code[2] = 8;
                 ssd_index++;
                 break;
             case K9:
-                digit3 = 9;
+                code[2] = 9;
                 ssd_index++;
                 break;
         }
-        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
+        SSD_WriteDigits(code[3], code[2], code[1], code[0], 0, 0, 0, 0);
     }
     else if (ssd_index == 4){
         switch(key){
             case K_D:
-                digit3 = -1;
+                code[2] = -1;
                 ssd_index--;
                 break;
             case K0:
-                digit4 = 0;
+                code[3] = 0;
                 ssd_index++;
                 break;
             case K1:
-                digit4 = 1;
+                code[3] = 1;
                 ssd_index++;
                 break;
             case K2: 
-                digit4 = 2;
+                code[3] = 2;
                 ssd_index++;
                 break;
             case K3:
-                digit4 = 3;
+                code[3] = 3;
                 ssd_index++;
                 break;
             case K4:
-                digit4 = 4;
+                code[3] = 4;
                 ssd_index++;
                 break;
             case K5:
-                digit4 = 5;
+                code[3] = 5;
                 ssd_index++;
                 break;
             case K6:
-                digit4 = 6;
+                code[3] = 6;
                 ssd_index++;
                 break;
             case K7: 
-                digit4 = 7;
+                code[3] = 7;
                 ssd_index++;
                 break;
             case K8:
-                digit4 = 8;
+                code[3] = 8;
                 ssd_index++;
                 break;
             case K9:
-                digit4 = 9;
+                code[3] = 9;
                 ssd_index++;
                 break;
         }
-        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
+        SSD_WriteDigits(code[3], code[2], code[1], code[0], 0, 0, 0, 0);
     }
     else if (ssd_index == 5) {
         if (key == K_D) {
-            digit4 = -1;
+            code[3] = -1;
             ssd_index--;
         }
         else if (key == K_E) {
-            if (digit1 == order1[0] && digit2 == order1[1] && digit3 == order1[2] && digit4 == order1[3]) {
-                looked_up_item = order1item ;
-                looked_up_status = orderstatus1;
-                mode5();
+            ssd_index = 1; // sets ssd index back to first digit
+            if (compareCodes(queue, code)) { // if the code entered is the same as any of the order codes in the queue
+                orderinfo(); // move to display the order info
             }
-            else if (digit1 == order2[0] && digit2 == order2[1] && digit3 == order2[2] && digit4 == order2[3]) {
-                looked_up_item = order2item ;
-                looked_up_status = orderstatus2 ;
-                mode5();
-            }
-            else if (digit1 == order3[0] && digit2 == order3[1] && digit3 == order3[2] && digit4 == order3[3]) {
-                looked_up_item = order3item ;
-                looked_up_status = orderstatus3 ;
-                mode5();
-            }
-            else if (digit1 == order4[0] && digit2 == order4[1] && digit3 == order4[2] && digit4 == order4[3]) {
-                looked_up_item = order4item;
-                looked_up_status = orderstatus4;
-                mode5();
-            }
-            else if (digit1 == order5[0] && digit2 == order5[1] && digit3 == order5[2] && digit4 == order5[3]) {
-                looked_up_item = order5item ;
-                looked_up_status = orderstatus5 ;
-                mode5();
-            }
-            else if (digit1 == order6[0] && digit2 == order6[1] && digit3 == order6[2] && digit4 == order6[3]) {
-                looked_up_item = order6item ;
-                looked_up_status = orderstatus6 ;
-                mode5();
-            }
-            else if (digit1 == order7[0] && digit2 == order7[1] && digit3 == order7[2] && digit4 == order7[3]) {
-                looked_up_item = order7item ;
-                looked_up_status = orderstatus7 ;
-                mode5();
-            }
-            else if (digit1 == order8[0] && digit2 == order8[1] && digit3 == order8[2] && digit4 == order8[3]) {
-                looked_up_item = order8item ;
-                looked_up_status = orderstatus8 ;
-                mode5();
-            }
-            else {
-                ERRORMSG = "Invalid Code";
-                mode6();
+            else if (compareCodes(queue, code) == 0) { // if the code does not match any of the orders
+                error(INVALIDCODE); // move to error mode with invalid code message
             }
         }
-        SSD_WriteDigits(digit4, digit3, digit2, digit1, 0, 0, 0, 0);
+        SSD_WriteDigits(code[3], code[2], code[1], code[0], 0, 0, 0, 0); // show the numbers currently typed
     }  
     else {
         LCD_WriteStringAtPos("YOU'RE COOKED",1,0);
     }
 }
-
-void mode5_input(eKey key) {
-    if (key == K_E){
-        mode1();
+//handles input for when order info is displayed
+void orderinfo_input (eKey key) {
+    if (key == K_E) {
+        mainmenu(); // move to main menu
+    }
+}
+//mode for when error is diplayed
+void error_input(eKey key) {
+    if (key == K_E) {
+        mainmenu(); // move to main menu
     }
 }
 
-void mode6_input(eKey key) {
-    //pass
+//creates a variable of type order based on menu item and queue position as arguments
+Order createOrder(const char* item, int QUEUESIZE) {
+    Order newOrder;
+    strncpy(newOrder.item, item, sizeof(newOrder.item) - 1); // manipulates item field of newOrder
+    newOrder.item[sizeof(newOrder.item) - 1] = '\0'; // Ensures null-termination
+    strcpy(newOrder.status, "In Queue"); // sets status of newOrder
+    newOrder.pos = QUEUESIZE;
+    newOrder.code[0] = rand() % 10; // randomly generate code
+    newOrder.code[1] = rand() % 10;
+    newOrder.code[2] = rand() % 10;
+    newOrder.code[3] = rand() % 10;
+    newOrder.time = 0;
+    return newOrder;
 }
 
-void JINGLEConfig(void) {
-    macro_disable_interrupts;
-     // the following lines configure interrupts to control the speaker
-    T3CONbits.ON = 0;       // turn off Timer3
-    OC1CONbits.ON = 0;      // Turn off OC1
-        /* The following code sets up the alarm timer and interrupts */
-    tris_A_OUT = 0;    
-    rp_A_OUT = 0x0C; // 1100 = OC1
-        // disable analog (set pins as digital)
-    ansel_A_OUT = 0;
-    
-    T3CONbits.TCKPS = 0;     //1:1 prescale value
-    T3CONbits.TGATE = 0;     //not gated input (the default)
-    T3CONbits.TCS = 0;       //PCBLK input (the default)
-    
-    OC1CONbits.ON = 0;       // Turn off OC1 while doing setup.
-    OC1CONbits.OCM = 6;      // PWM mode on OC1; Fault pin is disabled
-    OC1CONbits.OCTSEL = 1;   // Timer3 is the clock source for this Output Compare module
-    
-    IPC3bits.T3IP = 7;      // interrupt priority
-    IPC3bits.T3IS = 3;      // interrupt subpriority
-    macro_enable_interrupts();
+//adds variable of type order to queue
+void queueOrder(Order newOrder, Order queue[], int QUEUESIZE) {
+    queue[QUEUESIZE] = newOrder; // placed Order passed into function into queue array
+}
+//compares codes of orders to code entered on keypad in lookup()
+int compareCodes(Order queue[], int lookupcode[]) {
+    int i;
+    for(i=0;i<QUEUESIZE;i++) { // iterates through queue to see if code entered matched any order codes
+        if (queue[i].code[0] == lookupcode[0] && queue[i].code[1] == lookupcode[1] && queue[i].code[2] == lookupcode[2] && queue[i].code[3] == lookupcode[3]) {
+            LOOKUPITEM = queue[i].item; // stores order item for display
+            LOOKUPSTATUS = queue[i].status; // stores order status for display
+            return 1; //returns 1 if codes matched
+        }
+    }
+    return 0; // returns 0 if no match found
 }
 
+void ledStatuses(void) {
+    for(int i=0;i<QUEUESIZE;i++) {
+        if (strcmp(queue[i].status, "In Queue") == 0) {
+            LED_SetValue(i, 1);
+        }
+        else if (strcmp(queue[i].status, "In Prep") == 0) {
+            LED_SetValue(i, 0); // turns off for now, will do blinking soon
+        }
+        else if (strcmp(queue[i].status, "Ready") == 0) {
+            if (seconds%2 == 0) {
+                LED_SetValue(i, 1);
+            }
+            else if (seconds%2 == 1) {
+                LED_SetValue(i, 0);
+            }
+        }
+        else if (strcmp(queue[i].status, "No Status") == 0) {
+            LED_SetValue(i, 0);
+        }
+    }
+}
+
+void updateStatuses(void) {
+    for(int i=0;i<QUEUESIZE;i++) {
+        if (strcmp(queue[i].status, "In Queue") == 0 && !PREPPING) {
+            strncpy(queue[i].status, "In Prep", sizeof(queue[i].status) - 1); // puts each order in queue to prep
+            queue[i].status[sizeof(queue[i].status) - 1] = '\0'; // Ensures null-termination
+            PREPPING = 1;
+        }
+        else if (strcmp(queue[i].status, "In Prep") == 0) {
+            if (queue[i].time > 10) {
+                strncpy(queue[i].status, "Ready", sizeof(queue[i].status) - 1); // puts each order in queue to prep
+                queue[i].status[sizeof(queue[i].status) - 1] = '\0'; // Ensures null-termination
+                PREPPING = 0;
+            }
+            else {
+                queue[i].time++;
+            }
+        }
+    }
+}
+
+void checkReady(void) {
+    if (QUEUESIZE == 8) {
+        for (int i=0; i < QUEUESIZE && !REPLACE; i++) {
+            if (strcmp(queue[i].status, "Ready") == 0) {
+                REPLACEINDEX = i;
+                REPLACE = 1;
+            }
+        }
+        if (REPLACE) {
+            ordering();
+        }
+        else {
+            error(QUEUEFULL);
+        }
+    }
+    else {
+        ordering();
+    }
+}
+
+//plays a simple sound when order is placed
 void TurnOnJingle(void) {
+    int i;
     //set up alarm
     PR3 = (int)((float)((float)PB_FRQ/TMR_FREQ_SINE) + 0.5);               
     idxAudioBuf = 0;
@@ -880,8 +853,9 @@ void TurnOnJingle(void) {
     OC1CONbits.ON = 1;       // Start the OC1 module  
     IEC0bits.T3IE = 1;      // enable Timer3 interrupt    
     IFS0bits.T3IF = 0;      // clear Timer3 interrupt flag
+    
 }
-
+//self explanatory, turns jingle off
 void TurnOffJingle(void) {
     T3CONbits.ON = 0;       // turn off Timer3
     OC1CONbits.ON = 0;      // Turn off OC1
