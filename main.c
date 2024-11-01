@@ -57,7 +57,7 @@ int rDigit4;
 int ssd_index = 1;
 int JINGLE = 0;
 
-char *FoodSel;
+char FoodSel;
 int FoodIndex = 0;
 char Food1[] = "1-Burrito";
 char Food2[] = "2-Taco";
@@ -373,9 +373,31 @@ void mode5() {
     LCD_WriteStringAtPos("THE FOOD",0,0);
     LCD_WriteStringAtPos("STATUS",1,0);
     */
-   
-    LCD_WriteStringAtPos(looked_up_item,0,0);
-    LCD_WriteStringAtPos(looked_up_status,1,0);
+    if (looked_up_item == ("Burrito")){
+        LCD_WriteStringAtPos("Burrito",0,0);
+    }
+    else if (looked_up_item == ("Taco")){
+        LCD_WriteStringAtPos("Taco",0,0);
+    }
+    else if (looked_up_item == ("Fajita")){
+        LCD_WriteStringAtPos("Fajita",0,0);
+    }
+    else{
+        LCD_WriteStringAtPos("LOOKED UP ITEM NOT EQUAL",0,0);
+    }
+    
+    if (looked_up_status == ("In Queue")){
+        LCD_WriteStringAtPos("In Queue",1,0);
+    }
+    else if (looked_up_status == ("In Prep")){
+        LCD_WriteStringAtPos("In Prep",1,0);
+    }
+    else if (looked_up_status == ("Ready")){
+        LCD_WriteStringAtPos("Ready",1,0);
+    }
+    else{
+        LCD_WriteStringAtPos("LOOKED UP STATUS NOT EQUAL",1,0);
+    }
     
 }
 
@@ -451,7 +473,7 @@ void mode2_input(eKey key){
                     order1[1] = rDigit2;
                     order1[2] = rDigit3;
                     order1[3] = rDigit4;
-                    order1item = &FoodSel;
+                    order1item = FoodSel;
                     orderstatus1 = "In Queue";
                     SSD_WriteDigits(order1[3],order1[2],order1[1],order1[0],0,0,0,0);
                     break;
@@ -460,7 +482,7 @@ void mode2_input(eKey key){
                     order2[1] = rDigit2;
                     order2[2] = rDigit3;
                     order2[3] = rDigit4;
-                    order2item = &FoodSel;
+                    order2item = FoodSel;
                     orderstatus2 = "In Queue";
                     SSD_WriteDigits(order2[3],order2[2],order2[1],order2[0],0,0,0,0);
                     break;
@@ -469,7 +491,7 @@ void mode2_input(eKey key){
                     order3[1] = rDigit2;
                     order3[2] = rDigit3;
                     order3[3] = rDigit4;
-                    order3item = &FoodSel;
+                    order3item = FoodSel;
                     orderstatus3 = "In Queue";
                     SSD_WriteDigits(order3[3],order3[2],order3[1],order3[0],0,0,0,0);
                     break;
@@ -478,7 +500,7 @@ void mode2_input(eKey key){
                     order4[1] = rDigit2;
                     order4[2] = rDigit3;
                     order4[3] = rDigit4;
-                    order4item = &FoodSel;
+                    order4item = FoodSel;
                     orderstatus4 = "In Queue";
                     SSD_WriteDigits(order4[3],order4[2],order4[1],order4[0],0,0,0,0);
                     break;
@@ -487,7 +509,7 @@ void mode2_input(eKey key){
                     order5[1] = rDigit2;
                     order5[2] = rDigit3;
                     order5[3] = rDigit4;
-                    order5item = &FoodSel;
+                    order5item = FoodSel;
                     orderstatus5 = "In Queue";
                     SSD_WriteDigits(order5[3],order5[2],order5[1],order5[0],0,0,0,0);
                     break;
@@ -496,7 +518,7 @@ void mode2_input(eKey key){
                     order6[1] = rDigit2;
                     order6[2] = rDigit3;
                     order6[3] = rDigit4;
-                    order6item = &FoodSel;
+                    order6item = FoodSel;
                     orderstatus6 = "In Queue";
                     SSD_WriteDigits(order6[3],order6[2],order6[1],order6[0],0,0,0,0);
                     break;
@@ -505,7 +527,7 @@ void mode2_input(eKey key){
                     order7[1] = rDigit2;
                     order7[2] = rDigit3;
                     order7[3] = rDigit4;
-                    order7item = &FoodSel;
+                    order7item = FoodSel;
                     orderstatus7 = "In Queue";
                     SSD_WriteDigits(order7[3],order7[2],order7[1],order7[0],0,0,0,0);
                     break;
@@ -514,7 +536,7 @@ void mode2_input(eKey key){
                     order8[1] = rDigit2;
                     order8[2] = rDigit3;
                     order8[3] = rDigit4;
-                    order8item = &FoodSel;
+                    order8item = FoodSel;
                     orderstatus8 = "In Queue";
                     SSD_WriteDigits(order8[3],order8[2],order8[1],order8[0],0,0,0,0);
                     break;
